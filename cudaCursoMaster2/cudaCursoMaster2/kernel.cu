@@ -150,3 +150,29 @@
 //	return 0;
 //}
 
+//------------------------------------- 222 Latency ---------------------------------------
+
+//------------------------------------- 222 Occupancy ---------------------------------------
+
+/*
+
+Occupancy = Active warps / maximum warps
+
+48 registers per thread
+reg_per_warp = 48 * 32 = 1536
+
+GTX 970 device = 65536 regs per SM
+
+Warps permitidos por SM = 65536 / 1536 = 42.67
+
+*/
+
+//CUDA OCCUPANCY CALCULATOR (hoja de excel)
+
+/* GUIDE LINE FOR GRID AND BLOCK SIZE
+	-keep the number of threads per block a multiple of warp size 32
+	-Avoid small block sizes: Start with at least 128 or 256 threads per block
+	-keep the number of blocks much greater than the number of SMs to expose sufficient parallelism to your device
+
+ 
+*/
