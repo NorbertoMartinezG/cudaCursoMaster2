@@ -190,6 +190,112 @@ Warps permitidos por SM = 65536 / 1536 = 42.67
 
 */
 
+////Ejemplo suma elementos de un vector  (reduccion paralela)
+//
+//#include <stdio.h>
+//#include <stdlib.h>
+//
+//#include "cuda_runtime.h"
+//#include "device_launch_parameters.h"
+//
+//#include "common.h"
+//#include "cuda_common.cuh"
+//
+//
+//__global__ void reduction_neighbored_pairs(int * input, int * temp, int size)
+//{
+//	//identificacion del hilo
+//	int tid = threadIdx.x;
+//	int gid = blockDim.x * blockIdx.x + threadIdx.x;
+//
+//	if (gid>size)
+//	{
+//		return;
+//	}
+//
+//	for (int offset = 1; offset <= blockDim.x/2; offset *=2)
+//	{
+//		if (tid % (2 * offset) == 0)
+//		{
+//			input[gid] += input[gid + offset];
+//		}
+//		__syncthreads();
+//	}
+//
+//	if (tid == 0)
+//	{
+//		temp[blockIdx.x] = input[gid];
+//
+//	}
+//
+//}
+//
+//
+//int main(int argc, char** argv)
+//{
+//	printf("Running neighbored pairs reduction kernel \n");
+//
+//	int size = 1 << 27; // 128 Mb of data
+//	int byte_size = size * sizeof(int);
+//	int block_size = 128;
+//
+//	int* h_input, * h_ref;
+//	h_input = (int*)malloc(byte_size);
+//
+//	initialize(h_input, size, INIT_RANDOM);
+//
+//	//get the reduction result from cpu
+//	int cpu_result = reduction_cpu(h_input, size);
+//
+//	dim3 block(block_size);
+//	dim3 grid(size / block.x);
+//
+//	printf("kernel launch parameters | grid.x : %d, block.x : %d", grid.x, block.x);
+//
+//	int temp_array_byte_size = sizeof(int) * grid.x;
+//	h_ref = (int*)malloc(temp_array_byte_size);
+//
+//	int* d_input, * d_temp;
+//
+//	gpuErrchk(cudaMalloc((void**)&d_input, byte_size));
+//	gpuErrchk(cudaMalloc((void**)&d_temp, temp_array_byte_size));
+//
+//	gpuErrchk(cudaMemset(d_temp, 0, temp_array_byte_size)); // establece valor inicial en 0 
+//	gpuErrchk(cudaMemcpy(d_input, h_input, byte_size, cudaMemcpyHostToDevice));
+//
+//	reduction_neighbored_pairs << <grid, block >> > (d_input, d_temp, size);
+//
+//	gpuErrchk(cudaDeviceSynchronize());
+//
+//	cudaMemcpy(h_ref, d_temp, temp_array_byte_size, cudaMemcpyDeviceToHost);
+//
+//	int gpu_result = 0;
+//	for (int i = 0; i < grid.x; i++)
+//	{
+//		gpu_result += h_ref[i];
+//	}
+//
+//	//validity check
+//	compare_results(gpu_result, cpu_result);
+//
+//	gpuErrchk(cudaFree(d_temp));
+//	gpuErrchk(cudaFree(d_input));
+//
+//	free(h_ref);
+//	free(h_input);
+//
+//
+//	gpuErrchk(cudaDeviceReset());
+//	return 0;
+//}
+
+//------------------------------------- 227 Parallel reduction as warp divergence example ----------------
+/*
+ - Para evitar los codigos de divergencia en la suma paralela
+	- force neighboring threads to perform summation
+	- Interleaved pairs
+*/
+
 //Ejemplo suma elementos de un vector  (reduccion paralela)
 
 #include <stdio.h>
@@ -202,30 +308,60 @@ Warps permitidos por SM = 65536 / 1536 = 42.67
 #include "cuda_common.cuh"
 
 
-__global__ void reduction_neighbored_pairs(int * input, int * temp, int size)
+__global__ void reduction_neighbored_pairs_improved(int* int_array, int* temp_array, int size)
+{
+	int tid = threadIdx.x;
+	int gid = blockDim.x * blockIdx.x + threadIdx.x; 
+	int* i_data = int_array + blockDim.x * blockIdx.x;
+
+	if (gid > size)
+	{
+		return;
+	}
+
+	for (int offset = 1; offset <= blockDim.x / 2; offset *= 2)
+	{
+		int index = 2 * offset * tid;
+		
+		if (index < blockDim.x)
+		{
+			i_data[index];
+		}
+
+		__syncthreads();		
+	}
+
+	if (tid == 0)
+	{
+		temp_array[blockDim.x] = int_array[gid];
+	}
+
+}
+
+// CON ESTE KERNEL SE EVITA LA DIVERGENCIA ENTRE THREADS.
+__global__ void reduction_neighbored_pairs_new(int* int_array, int* temp_array, int size)
 {
 	//identificacion del hilo
 	int tid = threadIdx.x;
 	int gid = blockDim.x * blockIdx.x + threadIdx.x;
 
-	if (gid>size)
+	if (gid > size)
 	{
 		return;
 	}
 
-	for (int offset = 1; offset <= blockDim.x/2; offset *=2)
+	for (int offset = blockDim.x/2; offset > 0; offset = offset/2)
 	{
-		if (tid % (2 * offset) == 0)
+		if (tid < offset)
 		{
-			input[gid] += input[gid + offset];
+			int_array[gid] += int_array[gid + offset];
 		}
 		__syncthreads();
 	}
 
 	if (tid == 0)
 	{
-		temp[blockIdx.x] = input[gid];
-
+		temp_array[blockIdx.x] = int_array[gid];
 	}
 
 }
@@ -250,7 +386,7 @@ int main(int argc, char** argv)
 	dim3 block(block_size);
 	dim3 grid(size / block.x);
 
-	printf("kernel launch parameters | grid.x : %d, block.x : %d", grid.x, block.x);
+	printf("kernel launch parameters | grid.x : %d, block.x : %d \n\n", grid.x, block.x);
 
 	int temp_array_byte_size = sizeof(int) * grid.x;
 	h_ref = (int*)malloc(temp_array_byte_size);
@@ -263,7 +399,7 @@ int main(int argc, char** argv)
 	gpuErrchk(cudaMemset(d_temp, 0, temp_array_byte_size)); // establece valor inicial en 0 
 	gpuErrchk(cudaMemcpy(d_input, h_input, byte_size, cudaMemcpyHostToDevice));
 
-	reduction_neighbored_pairs << <grid, block >> > (d_input, d_temp, size);
+	reduction_neighbored_pairs_new << <grid, block >> > (d_input, d_temp, size);
 
 	gpuErrchk(cudaDeviceSynchronize());
 
@@ -288,3 +424,5 @@ int main(int argc, char** argv)
 	gpuErrchk(cudaDeviceReset());
 	return 0;
 }
+
+
