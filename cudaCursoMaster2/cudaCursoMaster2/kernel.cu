@@ -297,6 +297,146 @@ Warps permitidos por SM = 65536 / 1536 = 42.67
 */
 
 //Ejemplo suma elementos de un vector  (reduccion paralela)
+//
+//#include <stdio.h>
+//#include <stdlib.h>
+//
+//#include "cuda_runtime.h"
+//#include "device_launch_parameters.h"
+//
+//#include "common.h"
+//#include "cuda_common.cuh"
+//
+//
+//__global__ void reduction_neighbored_pairs_improved(int* int_array, int* temp_array, int size)
+//{
+//	int tid = threadIdx.x;
+//	int gid = blockDim.x * blockIdx.x + threadIdx.x; 
+//	int* i_data = int_array + blockDim.x * blockIdx.x;
+//
+//	if (gid > size)
+//	{
+//		return;
+//	}
+//
+//	for (int offset = 1; offset <= blockDim.x / 2; offset *= 2)
+//	{
+//		int index = 2 * offset * tid;
+//		
+//		if (index < blockDim.x)
+//		{
+//			i_data[index];
+//		}
+//
+//		__syncthreads();		
+//	}
+//
+//	if (tid == 0)
+//	{
+//		temp_array[blockDim.x] = int_array[gid];
+//	}
+//
+//}
+//
+//// CON ESTE KERNEL SE EVITA LA DIVERGENCIA ENTRE THREADS.
+//__global__ void reduction_neighbored_pairs_new(int* int_array, int* temp_array, int size)
+//{
+//	//identificacion del hilo
+//	int tid = threadIdx.x;
+//	int gid = blockDim.x * blockIdx.x + threadIdx.x;
+//
+//	if (gid > size)
+//	{
+//		return;
+//	}
+//
+//	for (int offset = blockDim.x/2; offset > 0; offset = offset/2)
+//	{
+//		if (tid < offset)
+//		{
+//			int_array[gid] += int_array[gid + offset];
+//		}
+//		__syncthreads();
+//	}
+//
+//	if (tid == 0)
+//	{
+//		temp_array[blockIdx.x] = int_array[gid];
+//	}
+//
+//}
+//
+//
+//int main(int argc, char** argv)
+//{
+//	printf("Running neighbored pairs reduction kernel \n");
+//
+//	int size = 1 << 27; // 128 Mb of data
+//	int byte_size = size * sizeof(int);
+//	int block_size = 128;
+//
+//	int* h_input, * h_ref;
+//	h_input = (int*)malloc(byte_size);
+//
+//	initialize(h_input, size, INIT_RANDOM);
+//
+//	//get the reduction result from cpu
+//	int cpu_result = reduction_cpu(h_input, size);
+//
+//	dim3 block(block_size);
+//	dim3 grid(size / block.x);
+//
+//	printf("kernel launch parameters | grid.x : %d, block.x : %d \n\n", grid.x, block.x);
+//
+//	int temp_array_byte_size = sizeof(int) * grid.x;
+//	h_ref = (int*)malloc(temp_array_byte_size);
+//
+//	int* d_input, * d_temp;
+//
+//	gpuErrchk(cudaMalloc((void**)&d_input, byte_size));
+//	gpuErrchk(cudaMalloc((void**)&d_temp, temp_array_byte_size));
+//
+//	gpuErrchk(cudaMemset(d_temp, 0, temp_array_byte_size)); // establece valor inicial en 0 
+//	gpuErrchk(cudaMemcpy(d_input, h_input, byte_size, cudaMemcpyHostToDevice));
+//
+//	reduction_neighbored_pairs_new << <grid, block >> > (d_input, d_temp, size);
+//
+//	gpuErrchk(cudaDeviceSynchronize());
+//
+//	cudaMemcpy(h_ref, d_temp, temp_array_byte_size, cudaMemcpyDeviceToHost);
+//
+//	int gpu_result = 0;
+//	for (int i = 0; i < grid.x; i++)
+//	{
+//		gpu_result += h_ref[i];
+//	}
+//
+//	//validity check
+//	compare_results(gpu_result, cpu_result);
+//
+//	gpuErrchk(cudaFree(d_temp));
+//	gpuErrchk(cudaFree(d_input));
+//
+//	free(h_ref);
+//	free(h_input);
+//
+//
+//	gpuErrchk(cudaDeviceReset());
+//	return 0;
+//}
+//
+
+//---------------------------------- 228 Parallel reduction with loop unrolling --------------------------------
+
+/*
+Loop unrolling
+
+In lopp unrolling rather than writing the body of a loop once and using a loop to execute it repeatedly, 
+the body is written in code multiple times.
+
+*/
+
+//Ejemplo suma elementos de un vector  (reduccion paralela)
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -307,65 +447,67 @@ Warps permitidos por SM = 65536 / 1536 = 42.67
 #include "common.h"
 #include "cuda_common.cuh"
 
-
-__global__ void reduction_neighbored_pairs_improved(int* int_array, int* temp_array, int size)
+__global__ void reduction_unrolling_bloks2(int* input, int* temp, int size)
 {
 	int tid = threadIdx.x;
-	int gid = blockDim.x * blockIdx.x + threadIdx.x; 
-	int* i_data = int_array + blockDim.x * blockIdx.x;
+	int BLOCK_OFFSET = blockIdx.x * blockDim.x * 2;
+	int index = BLOCK_OFFSET + tid;
+	int* i_data = input + BLOCK_OFFSET;
 
-	if (gid > size)
+	if ((index + blockDim.x) < size)
 	{
-		return;
+		input[index] += input[index + blockDim.x];
 	}
+	__syncthreads();
 
-	for (int offset = 1; offset <= blockDim.x / 2; offset *= 2)
-	{
-		int index = 2 * offset * tid;
-		
-		if (index < blockDim.x)
+	for (int offset = blockDim.x / 2; offset > 0; offset = offset / 2)
 		{
-			i_data[index];
+			if (tid < offset)
+			{
+				i_data[tid] += i_data[tid + offset];
+			}
+			__syncthreads();
 		}
-
-		__syncthreads();		
-	}
-
-	if (tid == 0)
-	{
-		temp_array[blockDim.x] = int_array[gid];
-	}
+	
+		if (tid == 0)
+		{
+			temp[blockIdx.x] = i_data[0];
+		}
 
 }
 
-// CON ESTE KERNEL SE EVITA LA DIVERGENCIA ENTRE THREADS.
-__global__ void reduction_neighbored_pairs_new(int* int_array, int* temp_array, int size)
+__global__ void reduction_unrolling_bloks4(int* input, int* temp, int size)
 {
-	//identificacion del hilo
 	int tid = threadIdx.x;
-	int gid = blockDim.x * blockIdx.x + threadIdx.x;
+	int BLOCK_OFFSET = blockIdx.x * blockDim.x * 4;
+	int index = BLOCK_OFFSET + tid;
+	int* i_data = input + BLOCK_OFFSET;
 
-	if (gid > size)
+	if ((index + 3 * blockDim.x) < size)
 	{
-		return;
+		int a1 = input[index];
+		int a2 = input[index + blockDim.x];
+		int a3 = input[index + 2 * blockDim.x];
+		int a4 = input[index + 3 * blockDim.x];
+		input[index] = a1 + a2 + a3 + a4;
 	}
+	__syncthreads();
 
-	for (int offset = blockDim.x/2; offset > 0; offset = offset/2)
+	for (int offset = blockDim.x / 2; offset > 0; offset = offset / 2)
 	{
 		if (tid < offset)
 		{
-			int_array[gid] += int_array[gid + offset];
+			i_data[tid] += i_data[tid + offset];
 		}
 		__syncthreads();
 	}
 
 	if (tid == 0)
 	{
-		temp_array[blockIdx.x] = int_array[gid];
+		temp[blockIdx.x] = i_data[0];
 	}
 
 }
-
 
 int main(int argc, char** argv)
 {
@@ -384,7 +526,7 @@ int main(int argc, char** argv)
 	int cpu_result = reduction_cpu(h_input, size);
 
 	dim3 block(block_size);
-	dim3 grid(size / block.x);
+	dim3 grid((size / block.x) / 4); // CAMBIAR ESTE VALOR DEPENDIENDO DEL KERNEL QUE SE UTILIZA YA SEA 2 O 4
 
 	printf("kernel launch parameters | grid.x : %d, block.x : %d \n\n", grid.x, block.x);
 
@@ -399,7 +541,7 @@ int main(int argc, char** argv)
 	gpuErrchk(cudaMemset(d_temp, 0, temp_array_byte_size)); // establece valor inicial en 0 
 	gpuErrchk(cudaMemcpy(d_input, h_input, byte_size, cudaMemcpyHostToDevice));
 
-	reduction_neighbored_pairs_new << <grid, block >> > (d_input, d_temp, size);
+	reduction_unrolling_bloks4 << <grid, block >> > (d_input, d_temp, size);
 
 	gpuErrchk(cudaDeviceSynchronize());
 
@@ -424,5 +566,3 @@ int main(int argc, char** argv)
 	gpuErrchk(cudaDeviceReset());
 	return 0;
 }
-
-
