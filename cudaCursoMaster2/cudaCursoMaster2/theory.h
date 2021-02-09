@@ -25,4 +25,18 @@
 		- We can launch CUDA kernel form another kernel
 
 
+
+	----------------------------- 235 Memory model -----------------------------------
+	- gld_efficiency					- eficiencia de la carga global de la memoria
+	- gld_throughput					- eficiencia de la carga global de la memoria desde el kernel
+	- gld_transaction					- indica cuantas transacciones de carga de memoria global realiza el kernel
+	- gld_transaction_per_request		- inica cuantas transacciones de memoria se necesitan para atneder la solicitud de memoria
+
+	-locality
+	Memorias segun su velocidad y tamaño
+	Registers       fast-small
+	caches			fast- small
+	main memory		slow-big
+	disk memory		slow-big
+
 */
