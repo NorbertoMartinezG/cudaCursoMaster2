@@ -39,4 +39,56 @@
 	main memory		slow-big
 	disk memory		slow-big
 
+
+	----------------------------- 236 Memory types -----------------------------------
+
+	- Registros				-son los recursos mas rapidos y escasos en GPU	
+	- Registros	spills		- if a kernel uses more registers that the hardware limit, 
+	- Local memory			- 
+	- shared memory			- momoria en chip
+	- constant memory
+	- texture memory
+	- global memory
+	- gpu caches
+
+	----------------------------- 237 Memory management and pinned memory -----------------------------------
+
+	 - Host
+		- Malloc
+		- free
+
+	- Device
+		- cudaMalloc
+		- cudaFree
+		- cudaMemCpy
+
+	- Pinned memory
+
+	memoria paginada -> pinned memory ->DRAM(GPU)
+
+	cudaError_t cudaMallocHost(void ** devPtr, size_t count);
+	cudaFreeHost(void * ptr);
+
+	---------------------------------------- 238 Zero copy memory --------------------------------------------
+
+	- cudaHostAllocDefault
+
+	- cudaHostAllocPortable
+
+	- cudaHostAllocWriteCombined
+
+	- cudaHostAllocMapped 
+
+	- cudaError_t cudaHostGetDevicePointer
+
+	Si necesita mas memoria que la memoria disponible en su GPU, la memoria de cpia cero sera una buena 
+	opcion
+
+
+
+
+
+
+
+
 */
