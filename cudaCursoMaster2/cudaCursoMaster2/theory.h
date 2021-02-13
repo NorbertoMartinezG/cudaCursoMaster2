@@ -84,11 +84,12 @@
 	Si necesita mas memoria que la memoria disponible en su GPU, la memoria de cpia cero sera una buena 
 	opcion
 
+	---------------------------------------- 239 Unified Memory --------------------------------------------
 
+	__device__ __managed__ int y;
+	cudaMallocManaged(vodi** devPtr size *size, unsigned int flags = 0);
 
-
-
-
+	- se tiene un costo adicional cuando se usa memoria unificada
 
 
 */
