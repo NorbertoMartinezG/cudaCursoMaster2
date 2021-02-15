@@ -92,7 +92,7 @@
 	- se tiene un costo adicional cuando se usa memoria unificada
 
 
-	---------------------------------------- 240 memory access patterns --------------------------------------------
+	---------------------------------------- 240 memory access patterns --------------------------------------
 		-L1
 	sm       global memory
 		-L2
@@ -106,5 +106,13 @@
 		- first address is an even multiple of the cache granularity
 	- Coalesced memory accesses
 		- 32 threads in a warp access a continuous chunk of memory
+
+
+    ------------------------------------------- 241 Global memory writes --------------------------------------
+
+	- La escritura alineada de memoria aumenta el rendimiento del programa
+
+
+
 
 */
