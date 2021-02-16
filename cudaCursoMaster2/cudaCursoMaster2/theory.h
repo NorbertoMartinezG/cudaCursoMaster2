@@ -112,6 +112,31 @@
 
 	- La escritura alineada de memoria aumenta el rendimiento del programa
 
+	------------------------------------------- 242 AOS vs SOA ------------------------------------------------
+
+	AOS - Matriz de estructuras 50% eficiencia
+
+		struct testStruct
+		{
+			float x;
+			float y;
+		}
+
+		struct testStruct AoS[N]
+
+
+	SOA - Estructura de patron de matriz 100% eficiencia
+
+		struct testStruct
+		{
+			float x[N];
+			float y[N];
+		}
+
+		struct testStruct SOA;
+
+
+
 
 
 
