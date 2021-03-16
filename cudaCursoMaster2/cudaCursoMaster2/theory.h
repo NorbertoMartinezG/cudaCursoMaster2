@@ -199,4 +199,94 @@
 	- acceso a la memoria en columna - requiere multiples transacciones
 	- acceso a la memoria en fila - requiere una solicitud de transaccion
 
-*/
+
+	------------------------- 450 Static and Dynamic shared memory ------------------------------------------
+
+	- manejo de indices para ir de una asignacion 2D a 1D
+
+
+	------------------------- 451 Shared memory padding -----------------------------------------------------
+
+	- Relleno de memoria evita errores
+
+	------------------------- 452 Parallel reduction with shared memory -------------------------------------
+
+	- Aumenta en un 50% el rendimiento
+
+	------------------------- 453 Synchronization in CUDA ---------------------------------------------------
+	- ordenacion de memoria
+	__threadfence()
+
+	------------------------- 454 Matrix transpose with shared memory ---------------------------------------
+	- la memoria compartida disminuye el tiempo entre transacciones de memoria
+
+	------------------------- 455 CUDA constant memory ------------------------------------------------------
+
+	- Constant memory is a special-purpose memory used for data that is read-only from device and accessed
+	  uniformly by threads in a warp
+	
+	- Constant memory variables exist for the lifespan of the application and are accessible from all threads within
+	  a grid and from the host through runtime functions.
+
+	  __constant__
+
+	  cudaMemcpyToSymbol (
+			const void* symbol,
+			const void* src,
+			size_t count,
+			size_t offset,
+			cudaMemcpyKind kind ) 
+
+	------------------------- 456 Matrix transpose with Shared memory padding  --------------------------------
+
+	 - mejora el rendimiento.
+	
+	------------------------- 457 CUDA warp shuffle instructions -----------------------------------------------
+
+	- The shuffel instruction proporciona el mecanismo para permitir que los subprocesos lean directamente otros
+	  registros de subprocesos que estan en el mismo warp
+
+		- Tipos
+			__shfl_sync()
+			__shfl_up_sync()
+			__shfl_down_sync()
+			__shfl_xor_sync()
+
+		- Implementacion
+			__shfl_x(mask;variable, source lane id, width)
+				
+				- lane id = id de carril para cada hilo = laneID = threadldx.x % 32
+				- width se establece entre 2 y sus multiplos hasta 32 que es el predeterminado
+
+	------------------------- 458 Parallel reduction with warp shuffle instructions -----------------------------
+
+	---------------------------------------------- 459 Summary --------------------------------------------------
+	- Shared Memory
+		- Shared memory banks			( 32 bancos por que el warp es de 32 hilos  )
+		- Access modes					( Acceso de 32 bits y 64 bits )
+		- Banck conflicts				 
+		- statically and Dynamically 
+		  declared shred memory			( dinamicamente solo se pueden declarar matrices 1D )
+		- Shared memory padding			( relleno de memoria para proporcionar compensaciones,  )
+		- Constant memory				( La memoria constante solo la puede leer el dispositivo y se tiene que configurar desde el host )
+		- Warp shuffle instructions		( tranferencia de valores entre registros sin utilizar memoria )
+
+	----------------------------------------- 459 CUDA Streams and Events --------------------------------------------------
+
+	- Stream, divide la carga de trabajo entre varios núcleos y ejecuta esos núcleos al mismo tiempo en un dispositivo.
+	
+	- Synchronous vs Asynchronous function calls
+
+	- NULL Stream - The null stream is the default stream taht kernel launches and data transfer use if 
+		you do not explicity specify a stream.
+
+
+
+
+
+
+
+
+
+
+	*/
